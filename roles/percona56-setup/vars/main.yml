@@ -1,0 +1,19 @@
+packages_list:
+  - ksh
+  - tar
+  - perl
+  - libaio
+  - sysstat
+kernel_params:
+# Minimize swap file use
+  vm.swappiness: 10
+  vm.dirty_background_ratio: 5
+  vm.dirty_ratio: 10
+# Max open file descriptors 512 * db processes + room for os
+  fs.file-max: 409600
+# percona 56 package list
+percona_list:
+  - Percona-Server-server-56
+  - Percona-Server-client-56
+  - percona-xtrabackup
+  - MySQL-python

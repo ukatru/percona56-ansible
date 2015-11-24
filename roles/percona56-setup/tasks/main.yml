@@ -1,0 +1,71 @@
+############################################################################
+#   This role is used to setup centos 7 linux machine to install percona using 
+#   percona YUM Repository
+#   Created By: UK, 11-23-2105      
+############################################################################
+# ===> upgrade all packages
+#- name: upgrade all packages
+#  yum: name=* state=latest
+
+# ====> Install required packages
+- name: Install required centos packages
+  yum: name={{ item }} state=present
+  with_items: packages_list
+- name: Disable SELinux
+  selinux: state=disabled
+- name: Disable Firewall Deamon (iptables)
+  service: name=iptables state=stopped enabled=no
+- name: Change kernel parameters
+  sysctl: name="{{ item.key }}" value="{{ item.value }}" state=present
+  with_dict: kernel_params
+
+# ====> setup mysql user and groups
+- name: Create groups
+  group: name={{ mysql_group }} state=present
+- name: Create user
+  user: name={{ mysql_user }} group={{ mysql_group }} shell=/bin/ksh password={{mysql_os_user_pass}}
+
+# ====> setup percona gpg key
+- name: setup percona gpg key
+  rpm_key: state=present key=http://www.percona.com/downloads/RPM-GPG-KEY-percona
+
+# ====> setup percona repository
+- name: Install percona repository
+  yum: name=http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm state=present
+
+# ====> install percona 56 server
+- name: Install percona database server
+  yum: name={{ item }} state=present
+  with_items: percona_list
+
+# ====> start mysql service
+- name: start mysql service
+  service: name=mysql state=started
+
+# ====> secure mysql installation
+- name: delete anonymous MySQL server user for {{ ansible_hostname }}
+  action: mysql_user user="" host="{{ ansible_hostname }}" state="absent"
+ 
+- name: delete anonymous MySQL server user for localhost
+  action: mysql_user user="" state="absent"
+ 
+- name: remove the MySQL test database
+  action: mysql_db db=test state=absent
+
+# ====> create new mysql database
+- name: create mysql database '{{ mysql_new_db }}'
+  action: mysql_db db={{ mysql_new_db }} state=present
+
+# ====> mysql root password and remote access
+- name: Change root user password
+  mysql_user: login_user=root
+              login_password=''
+              name=root
+              password={{ db_root_password }}
+              priv=*.*:ALL,GRANT
+              host={{ item }}
+  with_items:
+    - "{{ ansible_hostname }}"
+    - 127.0.0.1
+    - ::1
+    - localhost

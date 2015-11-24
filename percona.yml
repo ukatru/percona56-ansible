@@ -1,0 +1,10 @@
+---
+- name: Configure centos 7 to install percona server 5.6
+  hosts: percona
+  remote_user: vagrant
+  sudo: true
+  vars_files:
+    # User defined variables for infrastructure
+    - mysql-vars.yml
+  roles:
+    - role: percona56-setup
